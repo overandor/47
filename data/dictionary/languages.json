@@ -1,0 +1,4 @@
+{
+  "languages": ["English", "Russian", "Ukrainian", "Arabic", "Japanese"],
+  "mix_modes": ["bilingual", "trilingual", "code-switch", "hybrid-poetic"]
+}

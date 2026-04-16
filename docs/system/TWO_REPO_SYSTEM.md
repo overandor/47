@@ -1,204 +1,90 @@
-# Two-Repository Coordinated System Design
+# Two-Repository System (Unchained)
 
-## 1) Audit snapshot
+## Topology
 
-### repo 47 (observed)
-- Contains protocol-oriented documentation and prototype artifacts.
-- Lacks explicit control-plane repository structure for cross-repo synchronization.
+- **repo 47** (control plane): branches `control`, `main`
+- **repo 48** (runtime plane): branches `runtime`, `main`
 
-### repo 48 (reported input)
-- Contains runtime seed implementation:
-  - Rust Solana program skeleton
-  - TypeScript client scaffold
-  - client `package.json`
+Repos remain separate but are permanently coupled by schema contracts and CI dispatch.
 
-## 2) Target operating model
+## Responsibilities
 
-- **2 repositories, 4 branches, 1 canonical system**.
-- Repositories remain physically separate.
-- Compatibility is enforced by contracts + shared manifest + automated cross-repo checks.
+### repo 47 (control)
+- Owns schema contracts and dictionary constraints.
+- Validates incoming entry files.
+- Dispatches `new_entry_batch_v1` events to repo 48 runtime.
+- Blocks stable promotion unless runtime compatibility is confirmed.
 
-## 3) Required branch topology
+### repo 48 (runtime)
+- Owns Solana/Pinata/LLM runtime logic.
+- Mints NFTs from validated entry batches.
+- Updates minted registry and reports status.
 
-### repo 47 (control plane)
-- `control`: authoritative contract/spec branch (source of truth).
-- `main`: latest stable control-plane release compatible with repo 48 `main`.
+## Folder structure
 
-### repo 48 (runtime plane)
-- `runtime`: active implementation branch.
-- `main`: latest stable runtime release compatible with repo 47 `main`.
-
-## 4) Proposed repository structures
-
-### repo 47 (control plane)
-
+### repo 47
 ```text
-repo-47/
-  contracts/
-    events/
-      runtime_event.v1.schema.json
-    messages/
-      # future message schemas
-    shared/
-      version-manifest.schema.json
-  manifests/
-    system-manifest.json
-  docs/
-    system/
-      TWO_REPO_SYSTEM.md
-      GOVERNANCE.md              # future
-      COMPATIBILITY_POLICY.md    # future
-      RELEASE_PROCESS.md         # future
-  roadmap/
-    ROADMAP.md                   # future
-  .github/workflows/
-    control-contract-gate.yml
-    control-release-gate.yml
+control/unchained/schemas/
+control/unchained/contracts/
+control/unchained/policies/
+data/dictionary/
+data/entries/
+.github/workflows/control-entry-sync.yml
 ```
 
-### repo 48 (runtime plane)
-
+### repo 48 (target)
 ```text
-repo-48/
-  programs/
-    solana-core/                # Rust Solana program
-  client/
-    src/                        # TypeScript client
-    package.json
-  integration/
-    contract-adapters/
-    schema-loaders/
-  deployment/
-    scripts/
-    env/
-  tests/
-    runtime/
-    compatibility/
-  manifests/
-    system-manifest.json        # mirrored from repo 47 during sync
-  .github/workflows/
-    runtime-compat-gate.yml
-    runtime-release-gate.yml
+programs/
+client/
+scripts/
+src/
+data/entries/
+media/
+registry/minted.json
+.github/workflows/mint-on-upload.yml
 ```
 
-## 5) Synchronization workflow
+## Sync workflow
 
-1. Contract/spec change is authored in **repo 47 `control`**.
-2. repo 47 CI validates schemas and manifest consistency.
-3. repo 47 CI triggers repo 48 compatibility workflow (dispatch).
-4. repo 48 `runtime` runs conformance tests against repo 47 `control` contracts.
-5. If compatible, repo 48 updates/echoes shared manifest version and publishes validation result.
-6. Promotion:
-   - repo 47 `control` -> repo 47 `main`
-   - repo 48 `runtime` -> repo 48 `main`
-   only after cross-repo checks are green.
+1. Entry JSON is added to repo 47 `data/entries/**`.
+2. `control-entry-sync.yml` validates entry + dictionary conformance.
+3. repo 47 dispatches `new_entry_batch_v1` to repo 48.
+4. repo 48 runtime mints NFT(s) and updates `registry/minted.json`.
+5. repo 48 status feeds release gating for both `main` branches.
 
-## 6) Compatibility rules (normative)
+## Compatibility rules
 
-1. repo 47 `control` is source of truth for protocol contracts.
-2. repo 48 `runtime` must conform to repo 47 `control` contracts.
-3. Both `main` branches represent latest stable mutually-compatible release.
-4. Changes in repo 47 `control` must trigger compatibility checks in repo 48 `runtime`.
-5. Changes in repo 48 `runtime` must validate against repo 47 `control` schemas.
-6. Breaking changes cannot merge to either `main` without cross-repo validation.
-7. Every sync cycle must update shared version manifest.
+1. repo 47 schemas are source-of-truth.
+2. repo 48 runtime must parse and enforce repo 47 schema versions.
+3. Breaking schema changes require version bump and coordinated rollout.
+4. No merge to either `main` without cross-repo validation.
+5. Every sync cycle updates shared manifest.
 
-## 7) Shared manifest policy
+## Shared version manifest
 
-- Contract source branch + commit are pinned.
-- Runtime source branch + commit are pinned.
-- Compatibility state is explicit (`compatible`, `provisional`, `blocked`).
-- Schema/event versions are listed and semver-governed.
-- A sync cycle ID and timestamp provide traceability.
+Use `contracts/shared/version-manifest.schema.json` + `manifests/system-manifest.json`.
 
-## 8) GitHub Actions plan
+Required fields:
+- system version
+- sync cycle id/time
+- compatibility state
+- repo+branch+commit for control/runtime
+- schema versions
 
-### In repo 47
-- `control-contract-gate.yml`
-  - triggers on push/PR to `control`
-  - validates JSON schemas
-  - validates `manifests/system-manifest.json` against manifest schema
-  - dispatches validation request to repo 48 (`repository_dispatch`)
+## Release flow
 
-- `control-release-gate.yml`
-  - triggers on PR into `main`
-  - verifies manifest state is `compatible`
-  - verifies cross-repo status check has passed
-  - blocks merge otherwise
+### control-driven
+- Update schema in repo 47 `control`.
+- Dispatch and validate in repo 48 `runtime`.
+- If compatible, promote to both `main` branches.
 
-### In repo 48 (to implement there)
-- `runtime-compat-gate.yml`
-  - triggers on push/PR to `runtime` and repository_dispatch from repo 47
-  - fetches repo 47 contract schemas at pinned ref
-  - runs conformance checks and runtime integration tests
-  - updates runtime-side manifest mirror
+### runtime-driven (non-breaking)
+- Update runtime internals in repo 48 `runtime`.
+- Validate against current repo 47 schema.
+- Promote to both `main` branches if compatible.
 
-- `runtime-release-gate.yml`
-  - triggers on PR into repo 48 `main`
-  - requires conformance pass against repo 47 `main`
+## Conflict policy
 
-## 9) Release flow
-
-### Contract-led release
-1. Update contracts on repo 47 `control`.
-2. Run cross-repo validation on repo 48 `runtime`.
-3. If passed, update manifest compatibility and versions.
-4. Merge repo 47 `control` -> `main`.
-5. Merge repo 48 `runtime` -> `main`.
-6. Tag both repos with same system version (`system-vX.Y.Z`).
-
-### Runtime-led release (non-breaking)
-1. Implement internal runtime changes on repo 48 `runtime`.
-2. Validate against current repo 47 `control` contracts.
-3. Update shared manifest runtime commit + sync metadata.
-4. Promote to both `main` branches when compatibility remains `compatible`.
-
-## 10) Breaking-change handling
-
-- Breaking contract changes require:
-  - schema major version bump,
-  - migration notes,
-  - coordinated PRs in both repos,
-  - green cross-repo validation before any `main` merge.
-
-## 11) Conflict resolution policy
-
-1. Contract interpretation conflicts: repo 47 `control` schema is final.
-2. Runtime feasibility conflicts: escalate with an RFC issue in repo 47.
-3. Emergency mismatch on `main`: freeze both release pipelines and rollback to prior compatible manifest tuple.
-4. Stale manifest state: fail closed (block release) until manifest is reconciled.
-
-## 12) Governance controls
-
-- Required status checks on all four protected branches.
-- CODEOWNERS split:
-  - protocol/governance owners in repo 47,
-  - runtime owners in repo 48,
-  - at least one approver from each side for breaking changes.
-- Mandatory manifest update in each sync cycle.
-
-## 13) Example control-runtime message instance
-
-```json
-{
-  "event_id": "evt-8f1b8a2a",
-  "event_type": "runtime.tx_confirmed",
-  "spec_version": "v1",
-  "system_version": "0.1.0",
-  "origin": {
-    "repo": "repo-48",
-    "branch": "runtime",
-    "component": "solana_program"
-  },
-  "payload": {
-    "cluster": "devnet",
-    "program_id": "6mWQk1...",
-    "signature": "3Q5aT2...",
-    "status": "confirmed",
-    "error_code": null
-  },
-  "emitted_at_utc": "2026-04-16T12:05:00Z"
-}
-```
-
-Schema authority: `contracts/events/runtime_event.v1.schema.json`.
+- Contract interpretation conflicts are resolved by repo 47 control schema.
+- Runtime feasibility conflicts require coordinated RFC before release.
+- Incompatibility on stable branches triggers rollback to last compatible manifest.
