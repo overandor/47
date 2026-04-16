@@ -1,0 +1,69 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://repo47.example/contracts/shared/version-manifest.schema.json",
+  "title": "Two-Repo System Manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "system_version",
+    "sync_cycle_id",
+    "updated_at_utc",
+    "compatibility_state",
+    "control_plane",
+    "runtime_plane",
+    "contracts"
+  ],
+  "properties": {
+    "system_version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+    },
+    "sync_cycle_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "updated_at_utc": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "compatibility_state": {
+      "type": "string",
+      "enum": ["compatible", "provisional", "blocked"]
+    },
+    "control_plane": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["repo", "branch", "commit"],
+      "properties": {
+        "repo": { "type": "string" },
+        "branch": { "type": "string", "enum": ["control", "main"] },
+        "commit": { "type": "string", "minLength": 7 }
+      }
+    },
+    "runtime_plane": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["repo", "branch", "commit"],
+      "properties": {
+        "repo": { "type": "string" },
+        "branch": { "type": "string", "enum": ["runtime", "main"] },
+        "commit": { "type": "string", "minLength": 7 }
+      }
+    },
+    "contracts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["event_schema_version", "message_schema_version"],
+      "properties": {
+        "event_schema_version": {
+          "type": "string",
+          "pattern": "^v[0-9]+$"
+        },
+        "message_schema_version": {
+          "type": "string",
+          "pattern": "^v[0-9]+$"
+        }
+      }
+    }
+  }
+}

@@ -1,61 +1,28 @@
-# Semantic Protocol Runtime Prototype
+# Control Plane Repository (repo 47)
 
-This is a single-file prototype of a terminal-native semantic protocol programming system.
+Repository 47 is the control-plane authority for a permanently coupled two-repository system:
 
-## One-line core idea
+- **repo 47**: orchestration, protocol, contracts, governance
+- **repo 48**: runtime implementation (Solana program + TypeScript client)
 
-A **terminal-native semantic protocol language** where the user writes **typed intent** instead of language-specific code, and the system automatically **lowers fragments into the best runtime or programming language** under explicit policy, capability, and verification constraints.
+This repository does **not** execute the runtime. It defines what the runtime must implement.
 
-## Main file
-- `semantic_protocol_runtime.py`
+## Canonical topology
 
-## Example protocol
-```text
-policy {
-  optimize: latency > cost
-  deterministic: true
-  allow database[db.main]
-  allow filesystem[*]
-  allow network[slack.ops]
-  deny shell[*]
-  retries: 1
-}
+- repo 47 branches: `main`, `control`
+- repo 48 branches: `main`, `runtime`
 
-users := source @db.main "select id, email, score from users"
-hot   := users -> filter score > 0.8 -> project [id, email, score] -> sort score -> limit 10
-write! hot @file:"hot_users.jsonl"
-notify! hot @slack.ops:"#risk"
-```
+The two repositories remain separate, but they operate as one canonical system through shared manifests, contracts, and cross-repo validation.
 
-## Quick start
-```bash
-python semantic_protocol_runtime.py init
-python semantic_protocol_runtime.py explain examples/demo.spr
-python semantic_protocol_runtime.py compile examples/demo.spr --out build
-python semantic_protocol_runtime.py run examples/demo.spr --dry-run
-python semantic_protocol_runtime.py run examples/demo.spr
-```
+## Key artifacts in repo 47
 
-## Semantic Model & Operators
+- `docs/system/TWO_REPO_SYSTEM.md` — architecture, branch strategy, sync rules, release flow
+- `contracts/events/runtime_event.v1.schema.json` — example protocol event contract
+- `contracts/shared/version-manifest.schema.json` — shared manifest schema used by both repos
+- `manifests/system-manifest.json` — current compatibility manifest
+- `.github/workflows/control-contract-gate.yml` — contract validation + repo 48 dispatch
+- `.github/workflows/control-release-gate.yml` — stable release gate for `main`
 
-The SPR language uses a canonical set of operators to express semantic intent:
+## Rule of operation
 
-- `:=` : Bind a value to a name.
-- `->` : Apply a pure transform (e.g., `filter`, `project`, `map`, `sort`, `limit`).
-- `!` : Trigger a side effect (e.g., `write!`, `notify!`).
-- `@` : Bind to a specific runtime or resource (e.g., `@db.main`, `@file:"out.jsonl"`).
-- `&` : Join two or more bindings.
-- `|` : Fallback or alternative pipeline.
-- `:` : Optional type annotation (e.g., `users : List[User]`).
-- `~>` : Heuristic or approximate transform (LLM-assisted).
-- `#` : Planner hint.
-
-## Architecture
-
-The system contains:
-- **Semantic Parser**: Translates SPR source into a typed IR.
-- **Graph Builder**: Constructs intent, effect, and dependency graphs for verification and planning.
-- **Capability & Policy Checker**: Enforces security and optimization constraints declared in the `policy` block.
-- **Planner & Cost Model**: Ranks and selects the best execution targets (SQL pushdown vs. local Python) based on policy and resource availability.
-- **Lowering Engines**: Generates executable artifacts (SQL queries, Python scripts).
-- **Execution Runtime**: Orchestrates the execution of the unified plan and manages local resources like the demo SQLite database.
+`control` is source-of-truth for protocol contracts. `runtime` must conform before either `main` branch can advance.
