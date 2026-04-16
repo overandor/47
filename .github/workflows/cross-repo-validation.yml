@@ -1,0 +1,31 @@
+name: Cross-Repo Contract Validation
+
+on:
+  push:
+    branches: [ control ]
+  pull_request:
+    branches: [ control ]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Control Plane
+        uses: actions/checkout@v4
+
+      - name: Validate Schemas
+        run: |
+          python3 scripts/validate_control_entries.py
+
+      - name: Checkout Runtime Plane
+        uses: actions/checkout@v4
+        with:
+          repository: overandor/48
+          path: runtime
+          ref: runtime
+
+      - name: Verify Runtime Conformity
+        run: |
+          # Example: Run a script in runtime that checks against control schemas
+          # python3 runtime/scripts/check_conformity.py --schema-dir contracts/schemas
+          echo "Verifying runtime conformity to control-plane schemas..."

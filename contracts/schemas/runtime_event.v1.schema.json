@@ -1,0 +1,19 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Runtime Event",
+  "type": "object",
+  "properties": {
+    "event_id": { "type": "string", "format": "uuid" },
+    "timestamp": { "type": "string", "format": "date-time" },
+    "type": { "enum": ["ORDER_PLACED", "TRADE_EXECUTED", "FUNDS_SETTLED"] },
+    "payload": { "type": "object" },
+    "metadata": {
+      "type": "object",
+      "properties": {
+        "runtime_version": { "type": "string" },
+        "protocol_version": { "type": "string" }
+      }
+    }
+  },
+  "required": ["event_id", "timestamp", "type", "payload"]
+}

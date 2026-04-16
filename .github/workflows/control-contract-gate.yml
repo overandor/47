@@ -1,0 +1,61 @@
+name: control-contract-gate
+
+on:
+  push:
+    branches: [control]
+  pull_request:
+    branches: [control]
+
+jobs:
+  validate-control-artifacts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install validator
+        run: pip install jsonschema
+
+      - name: Validate schemas and manifest
+        run: |
+          python - <<'PY'
+          import json
+          from jsonschema import Draft202012Validator
+
+          with open('contracts/schemas/version-manifest.schema.json', 'r', encoding='utf-8') as f:
+            manifest_schema = json.load(f)
+          with open('manifests/system-manifest.json', 'r', encoding='utf-8') as f:
+            manifest = json.load(f)
+          Draft202012Validator(manifest_schema).validate(manifest)
+
+          with open('contracts/schemas/runtime_event.v1.schema.json', 'r', encoding='utf-8') as f:
+            event_schema = json.load(f)
+          Draft202012Validator.check_schema(event_schema)
+          print('control artifacts validated')
+          PY
+
+  trigger-runtime-compatibility:
+    if: github.event_name == 'push'
+    needs: validate-control-artifacts
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dispatch compatibility check to repo 48
+        env:
+          GH_TOKEN: ${{ secrets.RUNTIME_REPO_DISPATCH_TOKEN }}
+        run: |
+          curl -sS -X POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            https://api.github.com/repos/overandor/48/dispatches \
+            -d '{
+              "event_type": "control_contract_updated",
+              "client_payload": {
+                "control_repo": "47",
+                "control_branch": "control",
+                "control_sha": "'"${GITHUB_SHA}"'"
+              }
+            }'

@@ -1,0 +1,30 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Version Manifest",
+  "type": "object",
+  "properties": {
+    "system_version": { "type": "string" },
+    "protocol": {
+      "type": "object",
+      "properties": {
+        "version": { "type": "string" },
+        "schema_hash": { "type": "string" }
+      },
+      "required": ["version", "schema_hash"]
+    },
+    "runtime_targets": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "repo": { "type": "string" },
+          "compatible_versions": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        }
+      }
+    }
+  },
+  "required": ["system_version", "protocol"]
+}

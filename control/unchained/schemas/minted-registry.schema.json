@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://repo47.example/control/unchained/schemas/minted-registry.schema.json",
+  "title": "Minted Registry Record",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "slug",
+    "title",
+    "mintAddress",
+    "metadataUri",
+    "imageUri",
+    "createdAt"
+  ],
+  "properties": {
+    "slug": { "type": "string", "pattern": "^[a-z0-9-]+$" },
+    "title": { "type": "string", "minLength": 1 },
+    "mintAddress": { "type": "string", "minLength": 32 },
+    "metadataUri": { "type": "string", "pattern": "^ipfs://" },
+    "imageUri": { "type": "string", "pattern": "^ipfs://" },
+    "createdAt": { "type": "string", "format": "date-time" },
+    "commitSha": { "type": "string" }
+  }
+}
