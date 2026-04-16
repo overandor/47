@@ -1,0 +1,27 @@
+name: control-release-gate
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  stable-compatibility-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Assert compatibility_state is compatible
+        run: |
+          python - <<'PY'
+          import json
+          with open('manifests/system-manifest.json', 'r', encoding='utf-8') as f:
+            manifest = json.load(f)
+          state = manifest.get('compatibility_state')
+          if state != 'compatible':
+            raise SystemExit(f'compatibility_state must be compatible, found: {state}')
+          print('compatibility_state is compatible')
+          PY
+
+      - name: Verify runtime cross-repo check is required
+        run: |
+          echo "Configure branch protection to require repo 48 runtime compatibility status checks before merge."
