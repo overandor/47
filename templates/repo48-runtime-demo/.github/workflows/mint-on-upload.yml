@@ -1,0 +1,53 @@
+name: mint-on-upload
+
+on:
+  push:
+    branches: [runtime, main]
+    paths:
+      - "data/entries/**"
+      - "media/**"
+  workflow_dispatch:
+  schedule:
+    - cron: "*/30 * * * *"
+  repository_dispatch:
+    types: [new_entry_batch_v1]
+
+permissions:
+  contents: write
+
+jobs:
+  mint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install deps
+        run: npm ci
+
+      - name: Mint new entries
+        env:
+          SOLANA_RPC_URL: ${{ secrets.SOLANA_RPC_URL }}
+          SOLANA_PRIVATE_KEY_JSON: ${{ secrets.SOLANA_PRIVATE_KEY_JSON }}
+          PINATA_JWT: ${{ secrets.PINATA_JWT }}
+          LLM_ENABLED: ${{ secrets.LLM_ENABLED }}
+          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+          GITHUB_SHA: ${{ github.sha }}
+        run: npm run mint
+
+      - name: Commit updated registry
+        run: |
+          if [[ -n "$(git status --porcelain registry/minted.json)" ]]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add registry/minted.json
+            git commit -m "Update minted registry"
+            git push
+          fi

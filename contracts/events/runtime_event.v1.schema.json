@@ -1,0 +1,87 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://repo47.example/contracts/events/runtime_event.v1.schema.json",
+  "title": "Runtime Event v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "event_id",
+    "event_type",
+    "spec_version",
+    "system_version",
+    "origin",
+    "payload",
+    "emitted_at_utc"
+  ],
+  "properties": {
+    "event_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "event_type": {
+      "type": "string",
+      "enum": [
+        "runtime.tx_submitted",
+        "runtime.tx_confirmed",
+        "runtime.tx_failed"
+      ]
+    },
+    "spec_version": {
+      "type": "string",
+      "const": "v1"
+    },
+    "system_version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+    },
+    "origin": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["repo", "branch", "component"],
+      "properties": {
+        "repo": {
+          "type": "string",
+          "const": "repo-48"
+        },
+        "branch": {
+          "type": "string",
+          "enum": ["runtime", "main"]
+        },
+        "component": {
+          "type": "string",
+          "enum": ["solana_program", "typescript_client"]
+        }
+      }
+    },
+    "payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["cluster", "program_id", "signature", "status"],
+      "properties": {
+        "cluster": {
+          "type": "string",
+          "enum": ["localnet", "devnet", "mainnet-beta"]
+        },
+        "program_id": {
+          "type": "string",
+          "minLength": 32
+        },
+        "signature": {
+          "type": "string",
+          "minLength": 32
+        },
+        "status": {
+          "type": "string",
+          "enum": ["submitted", "confirmed", "failed"]
+        },
+        "error_code": {
+          "type": ["string", "null"]
+        }
+      }
+    },
+    "emitted_at_utc": {
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}
