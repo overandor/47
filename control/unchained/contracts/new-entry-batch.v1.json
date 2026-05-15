@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://repo47.example/control/unchained/contracts/new-entry-batch.v1.json",
+  "title": "New Entry Batch Event",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "spec_version",
+    "system_version",
+    "entry_paths",
+    "control_sha",
+    "emitted_at_utc"
+  ],
+  "properties": {
+    "spec_version": { "type": "string", "const": "v1" },
+    "system_version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
+    "entry_paths": {
+      "type": "array",
+      "items": { "type": "string", "pattern": "^data/entries/.+\\.json$" }
+    },
+    "control_sha": { "type": "string", "minLength": 7 },
+    "emitted_at_utc": { "type": "string", "format": "date-time" }
+  }
+}

@@ -2,7 +2,7 @@
   "system_version": "0.1.0",
   "sync_cycle_id": "sync-2026-04-16-001",
   "updated_at_utc": "2026-04-16T00:00:00Z",
-  "compatibility_state": "provisional",
+  "compatibility_state": "compatible",
   "control_plane": {
     "repo": "repo-47",
     "branch": "control",

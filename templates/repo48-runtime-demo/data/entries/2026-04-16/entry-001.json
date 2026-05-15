@@ -1,0 +1,10 @@
+{
+  "slug": "entry-001",
+  "title": "Unchained Language Artifact 001",
+  "text": "Signal-poem mixing English, Russian, and symbolic fragments.",
+  "languages": ["English", "Russian"],
+  "mix_mode": "bilingual",
+  "style": "artifact",
+  "media_file": "media/entry-001.png",
+  "external_ref": "github:data/entries/2026-04-16/entry-001.json"
+}
